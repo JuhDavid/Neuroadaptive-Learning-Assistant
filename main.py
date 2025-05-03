@@ -16,7 +16,7 @@ load_dotenv()
 # openai.api_key = OPENAI_API_KEY
 
 
-genai.configure(api_key='AIzaSyDjTkryna9S_6A8ucMTWq2QvCu9bLCl7WM')  # Replace with your Gemini API key
+genai.configure(api_key='KEY')  # Replace with your Gemini API key
 
 app = FastAPI(title="Neuroadaptive Learning Assistant API")
 
