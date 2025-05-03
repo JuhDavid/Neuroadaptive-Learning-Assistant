@@ -5,53 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Neuroadaptive Learning Assistant</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
   <div class="bg-white max-w-2xl w-full rounded-2xl shadow-xl p-6 space-y-6">
     <h1 class="text-2xl font-bold text-center">Neuroadaptive Learning Assistant</h1>
 
-    <div>
-      <label for="question" class="block text-sm font-medium text-gray-700">Your Question</label>
-      <textarea id="question" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Type your question here..."></textarea>
+    <div id = "topic-container" class = "mb-4"> 
+      <label for="topic" class="block text-sm font-medium text-gray-700">Topic</label>
+      <textarea id="topic" rows="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Type your topic"></textarea>
     </div>
 
-    <div>
-      <label for="focusLevel" class="block text-sm font-medium text-gray-700">Focus Level: <span id="focus-value">3</span></label>
-      <input type="range" id="focusLevel" min="1" max="5" step="1" value="3" class="w-full">
-      <p class="text-xs text-gray-500 mt-1">1 = Very Tired • 5 = Flow State</p>
-    </div>
-
-    <button id="submitBtn" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded hover:bg-indigo-700">
-      Get Response
-    </button>
-
-    <div id="response-container" class="hidden border-t pt-4">
+    <div id="response-container" class="hidden mb-4">
       <h2 class="text-lg font-semibold mb-2">Assistant Response</h2>
       <p id="response-text" class="text-gray-800 whitespace-pre-line"></p>
     </div>
+
+    <div id = answer-container class= "hidden mb-4">
+      <label for="answer" class="block text-sm font-medium text-gray-700">Your Answer</label>
+      <textarea id="answer" rows="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Type your answer here..."></textarea>
+    </div>
+
+    <button id="submitBtn" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded hover:bg-indigo-700">
+      Submit
+    </button>
+
+
   </div>
 
   <script>
-    const questionInput = document.getElementById('question');
+    const answerInput = document.getElementById('answer');
     const focusLevelInput = document.getElementById('focusLevel');
     const focusValueDisplay = document.getElementById('focus-value');
     const submitBtn = document.getElementById('submitBtn');
     const responseContainer = document.getElementById('response-container');
     const responseText = document.getElementById('response-text');
-
-    focusLevelInput.addEventListener('input', () => {
-      focusValueDisplay.textContent = focusLevelInput.value;
-    });
-
+    const topicInput = document.getElementById('topic');
+    let savedTopic = null;
     submitBtn.addEventListener('click', async () => {
-      const question = questionInput.value.trim();
-      const focusLevel = parseInt(focusLevelInput.value);
-      const userId = crypto.randomUUID();
-
-      if (!question) {
-        alert('Please enter a question.');
-        return;
+      const answer = answerInput.value.trim();
+      if (!savedTopic) {
+        savedTopic = topicInput.value.trim();
+        topicInput.value = topic.replace(/[^a-zA-Z0-9 ]/g, '').slice(0, 100); // Sanitize input
       }
+      const userId = crypto.randomUUID();
 
       submitBtn.disabled = true;
       submitBtn.textContent = 'Loading...';
@@ -62,18 +62,22 @@
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ user_id: userId, question, focus_level: focusLevel })
+          body: JSON.stringify({ user_id: userId, answer: answer,topic: savedTopic, focus_level: focusLevel })
         });
 
         const data = await res.json();
         responseText.textContent = data.adapted_response;
         responseContainer.classList.remove('hidden');
+        document.getElementById('topic-container').classList.add('hidden'); // Hide the topic input after submission{
+        document.getElementById('answer-container').classList.remove('hidden'); // Show the answer input
+        answerInput.value = ''; // Clear the answer input for the next response
+        MathJax.typesetPromise(); // Re-render MathJax after updating the response text
       } catch (err) {
         responseText.textContent = 'An error occurred while contacting the assistant.';
         responseContainer.classList.remove('hidden');
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Get Response';
+        submitBtn.textContent = 'Submit';
       }
     });
   </script>
