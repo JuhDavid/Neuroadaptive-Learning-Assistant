@@ -16,7 +16,7 @@ load_dotenv()
 # openai.api_key = OPENAI_API_KEY
 
 
-genai.configure(api_key='KEY')  # Replace with your Gemini API key
+genai.configure(api_key='key')  # Replace with your Gemini API key
 
 app = FastAPI(title="Neuroadaptive Learning Assistant API")
 
@@ -65,7 +65,6 @@ class RequestModel(BaseModel):
     user_id: str
     answer: str
     topic: str
-    focus_level: int  # expected 1-5
 
 class ResponseModel(BaseModel):
     user_id: str
@@ -89,7 +88,7 @@ async def generate_adaptive_response(req: RequestModel):
     ### REPLACE THIS WITH FOCUS LEVEL CALCULATION 
     ### UP TO YOU ON HOW TO DECIDE HOW FOCUS IS CALCULATED BUT DO KNOW THAT THIS IS RUN WHEN THE USER PRESSES THE SUBMIT BUTTON AFTER WRITING THEIR ANSWER
     ### I RECOMMEND USING SOME SORT OF ASYNC FUNCTION THAT CONTINUALLY CALCULATES THE FOCUS LEVEL MAYBE ASK DAVID OR SOMEONE ELSE FOR HELP ON THIS
-    focusLevel = np.random.randint(1, 6)  # Randomly generate a focus level between 1 and 5
+    focusLevel = str(np.random.randint(1, 6)) # Randomly generate a focus level between 1 and 5
 
 
 
@@ -109,9 +108,9 @@ async def generate_adaptive_response(req: RequestModel):
     print(llm_output)
     return ResponseModel(
         user_id=req.user_id,
-        focus_level=req.focus_level,
         adapted_response=llm_output,
-        prompt_used=prompt
+        prompt_used=prompt,
+        focus_level=focusLevel,
     )
 
 

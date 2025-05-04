@@ -38,8 +38,6 @@
 
   <script>
     const answerInput = document.getElementById('answer');
-    const focusLevelInput = document.getElementById('focusLevel');
-    const focusValueDisplay = document.getElementById('focus-value');
     const submitBtn = document.getElementById('submitBtn');
     const responseContainer = document.getElementById('response-container');
     const responseText = document.getElementById('response-text');
@@ -62,7 +60,7 @@
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ user_id: userId, answer: answer,topic: savedTopic, focus_level: focusLevel })
+          body: JSON.stringify({ user_id: userId, answer: answer,topic: savedTopic })
         });
 
         const data = await res.json();
