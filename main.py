@@ -5,18 +5,20 @@ import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 import numpy as np
+import logging
 
+# Load environment variables
 load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    raise RuntimeError("Missing required environment variable: GEMINI_API_KEY")
 
-# # Load API key
-# OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-# if not OPENAI_API_KEY:
-#     raise RuntimeError("Missing required environment variable: OPENAI_API_KEY")
+# Configure Gemini
+genai.configure(api_key=GEMINI_API_KEY)
+MODEL = genai.GenerativeModel("gemini-2.0-flash")
 
-# openai.api_key = OPENAI_API_KEY
-
-
-genai.configure(api_key='key')  # Replace with your Gemini API key
+# Logging setup
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Neuroadaptive Learning Assistant API")
 
@@ -29,9 +31,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Prompt templates by focus level
+# Prompt templates
 PROMPT_TEMPLATES = {
-    1:  "You are a math tutor with a focus on math from grades 5-12.\n"
+    1: (
+        "You are a math tutor with a focus on math from grades 5-12.\n"
         "You ask the user what topic they would like to learn/get more practice on and they said {topic} \n"
         "You will then create a math problem for them to solve within that said topic.\n"
         "The user will then provide the answer to the math problem, along with the user's answer will be their engagement level.\n"
@@ -39,8 +42,9 @@ PROMPT_TEMPLATES = {
         "If the answer is wrong you should also provide detailed steps on how to solve the question. \n"
         "The levels of engagement will be a number from 1-5, where 1 is not focused at all and 5 is completely focused. \n"
         "When responding only provide the math problem and nothing else and in this format. \n"
-        "Question: <question in latex format and wrapped with double $ signs>\n",
-    2:  
+        "Question: <question in latex format and wrapped with double $ signs>\n"
+    ),
+    2: (
         "You are a math tutor with a focus on math from grades 5-12.\n" 
         "Based on the engagement level and the user's answer create a new math problem with the same topic: {topic} but either at a more difficult level or an easier level. \n"
         "The levels of engagement will be a number from 1-5, where 1 is not focused at all and 5 is completely focused. \n"        
@@ -50,21 +54,26 @@ PROMPT_TEMPLATES = {
         "<IMPORTANT WRITE ALL EQUATIONS IN LATEX SURROUNDED BY  '$$'>\n"
         "The user's response: \n"
         "User's average focus level: {focus_level}\n"
-        "Respond in this format and nothing else :\n"
+        "Respond in this format and nothing else:\n"
         "Question: {last_question}>\n"
         "User Answer: <user's answer>\n"
-        "Result: <whether they were right or wrong> \n"
+        "Result: <whether they were right or wrong>\n"
         "Focus Level: {focus_level}\n"
         "Explanation: <explanation>\n"
-        "Wheteher or not you will increase the difficulty of the question or not: <yes or no>\n"
+        "Whether or not you will increase the difficulty of the question or not: <yes or no>\n"
         "New Question: <new question>\n"
+    )
 }
-global lastprompt
-lastprompt = "First Prompt"
+
+# Store last question per user
+user_last_question = {}
+
+# Request and response models
 class RequestModel(BaseModel):
     user_id: str
     answer: str
     topic: str
+    focus_level: int  # 1 to 5
 
 class ResponseModel(BaseModel):
     user_id: str
@@ -72,48 +81,48 @@ class ResponseModel(BaseModel):
     adapted_response: str
     prompt_used: str
 
+# Call Gemini API
 async def call_llm_api(prompt: str) -> str:
     try:
-        model = genai.GenerativeModel("gemini-2.0-flash")
-        response = model.generate_content(prompt)
+        response = MODEL.generate_content(prompt)
         return response.text.strip()
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Gemini API error: {str(e)}")
 
+# Main endpoint
 @app.post("/generate", response_model=ResponseModel)
 async def generate_adaptive_response(req: RequestModel):
-    global lastquestion
+    user_id = req.user_id
+    focus_level = req.focus_level  # Assume it's passed from frontend
 
-
-    ### REPLACE THIS WITH FOCUS LEVEL CALCULATION 
-    ### UP TO YOU ON HOW TO DECIDE HOW FOCUS IS CALCULATED BUT DO KNOW THAT THIS IS RUN WHEN THE USER PRESSES THE SUBMIT BUTTON AFTER WRITING THEIR ANSWER
-    ### I RECOMMEND USING SOME SORT OF ASYNC FUNCTION THAT CONTINUALLY CALCULATES THE FOCUS LEVEL MAYBE ASK DAVID OR SOMEONE ELSE FOR HELP ON THIS
-    focusLevel = str(np.random.randint(1, 6)) # Randomly generate a focus level between 1 and 5
-
-
-
-
-
-    if req.answer: #If the user has already provided an answer that means that there is a previous question that was asked and the user is now providing an answer to that question.
-        template = PROMPT_TEMPLATES[2] 
-        prompt = template.format( last_question = lastquestion, topic=req.topic, user_answer=req.answer, focus_level=focusLevel)
-    else:
+    if req.answer:  # User is responding to previous question
+        last_question = user_last_question.get(user_id, "No previous question.")
+        template = PROMPT_TEMPLATES[2]
+        prompt = template.format(
+            last_question=last_question,
+            topic=req.topic,
+            user_answer=req.answer,
+            focus_level=focus_level
+        )
+    else:  # First-time question generation
         template = PROMPT_TEMPLATES[1]
         prompt = template.format(topic=req.topic)
+
     llm_output = await call_llm_api(prompt)
-    last_line = llm_output.splitlines()[-1]  # Get the last line of the response
-    lastquestion = last_line  # Extract the question from the last line
-    print("Last question: ", lastquestion)
-    print(prompt)
-    print(llm_output)
+    last_line = llm_output.splitlines()[-1]
+    user_last_question[user_id] = last_line  # Update for the user
+
+    logging.info(f"Prompt: {prompt}")
+    logging.info(f"LLM Output: {llm_output}")
+
     return ResponseModel(
-        user_id=req.user_id,
+        user_id=user_id,
+        focus_level=focus_level,
         adapted_response=llm_output,
-        prompt_used=prompt,
-        focus_level=focusLevel,
+        prompt_used=prompt
     )
 
-
+# Run the app (optional if using uvicorn CLI)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
