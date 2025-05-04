@@ -1,6 +1,6 @@
 # Neuroadaptive-Learning-Assistant
 
-Create a .env in the same folder with your OPENAI_API_KEY.
+Create a .env in the same folder with your GEMINI_API_KEY.
 
 run backend with python -m uvicorn main:app --reload
 
