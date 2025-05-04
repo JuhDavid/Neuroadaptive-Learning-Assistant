@@ -1,0 +1,125 @@
+import numpy as np
+import threading
+import time
+from pylsl import StreamInlet, resolve_stream
+from scipy.signal import welch
+
+# Global variables for focus monitoring
+focus_data = {
+    'current_level': 3,  # Default middle level
+    'monitoring_active': False,
+    'eeg_buffer': [],
+    'sampling_rate': 250,  # Typical EEG sampling rate
+    'inlet': None
+}
+
+# Function to calculate bandpower in a specific frequency range
+def calculate_bandpower(data, fs, band):
+    """Calculate bandpower in a specific frequency band"""
+    if len(data) < fs:
+        return 0
+    
+    # Calculate power using Welch's method
+    freqs, psd = welch(data, fs, nperseg=int(fs*2))
+    idx = np.logical_and(freqs >= band[0], freqs <= band[1])
+    return np.trapz(psd[idx], freqs[idx])
+
+# Function to connect to an EEG stream
+def setup_lsl_connection():
+    """Connect to an available EEG stream"""
+    try:
+        print("Looking for an EEG stream...")
+        streams = resolve_stream('type', 'EEG')
+        if streams:
+            focus_data['inlet'] = StreamInlet(streams[0])
+            print(f"Connected to {streams[0].name()} stream")
+            return True
+        return False
+    except Exception as e:
+        print(f"Error connecting to EEG stream: {e}")
+        return False
+
+# Continuous focus monitoring function
+def monitor_focus():
+    """Continuously monitor focus using EEG data or simulation"""
+    print("Focus monitoring started")
+    focus_data['monitoring_active'] = True
+    focus_data['start_time'] = time.time()
+    
+    # Try to connect to an EEG stream
+    using_eeg = setup_lsl_connection()
+    
+    # Main monitoring loop
+    while focus_data['monitoring_active']:
+        try:
+            if using_eeg and focus_data['inlet']:
+                # Get data from EEG stream
+                chunk, _ = focus_data['inlet'].pull_chunk(max_samples=focus_data['sampling_rate']//10)
+                
+                if chunk and len(chunk) > 0:
+                    # Extract channel data (using first channel for simplicity)
+                    channel_data = [sample[0] for sample in chunk]
+                    
+                    # Add to buffer and maintain buffer size
+                    focus_data['eeg_buffer'].extend(channel_data)
+                    if len(focus_data['eeg_buffer']) > focus_data['sampling_rate'] * 5:  # Keep 5 seconds
+                        focus_data['eeg_buffer'] = focus_data['eeg_buffer'][-(focus_data['sampling_rate'] * 5):]
+                    
+                    # Calculate focus level if we have enough data
+                    if len(focus_data['eeg_buffer']) >= focus_data['sampling_rate']:
+                        # Calculate bandpowers for different frequency bands
+                        theta = calculate_bandpower(focus_data['eeg_buffer'], focus_data['sampling_rate'], (4, 8))
+                        alpha = calculate_bandpower(focus_data['eeg_buffer'], focus_data['sampling_rate'], (8, 13))
+                        beta = calculate_bandpower(focus_data['eeg_buffer'], focus_data['sampling_rate'], (13, 30))
+                        
+                        # Avoid division by zero
+                        theta = max(0.001, theta)
+                        
+                        # Calculate focus index based on neurophysiological principles
+                        focus_index = (beta + 0.5 * alpha) / theta
+                        
+                        # Map to focus levels 1-5
+                        if focus_index < 0.5:
+                            focus_data['current_level'] = 1
+                        elif focus_index < 1.0:
+                            focus_data['current_level'] = 2
+                        elif focus_index < 2.0:
+                            focus_data['current_level'] = 3
+                        elif focus_index < 3.0:
+                            focus_data['current_level'] = 4
+                        else:
+                            focus_data['current_level'] = 5
+            else:
+                # Simulate changing focus levels that decrease over time
+                elapsed_minutes = (time.time() - focus_data['start_time']) / 60.0
+                time_factor = min(1.0, elapsed_minutes / 30.0)  # Max effect after 30 min
+                
+                # Adjust probabilities based on time
+                probs = [
+                    0.1 + 0.1 * time_factor,  # Level 1
+                    0.2 + 0.1 * time_factor,  # Level 2
+                    0.4 - 0.1 * time_factor,  # Level 3
+                    0.2 - 0.05 * time_factor,  # Level 4
+                    0.1 - 0.05 * time_factor   # Level 5
+                ]
+                
+                # Ensure valid probability distribution
+                probs = [max(0, p) for p in probs]
+                probs = [p / sum(probs) for p in probs]
+                
+                # Update focus level based on these probabilities
+                focus_data['current_level'] = np.random.choice([1, 2, 3, 4, 5], p=probs)
+            
+            time.sleep(1)
+        except Exception as e:
+            print(f"Error in focus monitoring: {e}")
+            time.sleep(1)
+
+# Start focus monitoring in a background thread if not already running
+if not focus_data.get('monitoring_active'):
+    focus_thread = threading.Thread(target=monitor_focus)
+    focus_thread.daemon = True
+    focus_thread.start()
+
+# Get the current focus level when the submit button is pressed
+focusLevel = focus_data['current_level']
