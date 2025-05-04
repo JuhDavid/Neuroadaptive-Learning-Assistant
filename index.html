@@ -31,6 +31,7 @@
     </form>
 
     <button id="tts-toggle" class="tts-button">🔈 TTS: ON</button>
+    <button id="voice-toggle" class="tts-button">🎤 Voice Input: OFF</button>
 
     <div id="response-section">
       <h2>Conversation</h2>
@@ -44,17 +45,34 @@
     const form = document.getElementById("question-form");
     const output = document.getElementById("response-output");
     const ttsToggle = document.getElementById("tts-toggle");
+    const voiceToggle = document.getElementById("voice-toggle");
 
     let ttsEnabled = true;
+    let voiceInputEnabled = false;
     let availableVoices = [];
 
     const updateToggleText = () => {
       ttsToggle.textContent = ttsEnabled ? "🔈 TTS: ON" : "🔇 TTS: OFF";
     };
 
+    const updateVoiceToggleText = () => {
+      voiceToggle.textContent = voiceInputEnabled ? "🎤 Voice Input: ON" : "🎤 Voice Input: OFF";
+    };
+
     ttsToggle.addEventListener("click", () => {
       ttsEnabled = !ttsEnabled;
       updateToggleText();
+    });
+
+    voiceToggle.addEventListener("click", () => {
+      voiceInputEnabled = !voiceInputEnabled;
+      updateVoiceToggleText();
+
+      if (voiceInputEnabled) {
+        startVoiceInput();
+      } else {
+        stopVoiceInput();
+      }
     });
 
     const speak = (text) => {
@@ -126,6 +144,40 @@
       document.getElementById("answer").value = "";
     });
 
+    // Voice Input
+    let recognition;
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.continuous = false;
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById("answer").value = transcript;
+      };
+
+      recognition.onerror = function(event) {
+        console.error("Speech recognition error:", event.error);
+      };
+
+      recognition.onend = function() {
+        if (voiceInputEnabled) recognition.start(); // Restart if still enabled
+      };
+    } else {
+      voiceToggle.disabled = true;
+      voiceToggle.textContent = "🎤 Voice Input: Not supported";
+    }
+
+    function startVoiceInput() {
+      if (recognition) recognition.start();
+    }
+
+    function stopVoiceInput() {
+      if (recognition) recognition.stop();
+    }
+
     // Neuron animation background
     const canvas = document.getElementById("neuron-bg");
     const ctx = canvas.getContext("2d");
@@ -152,10 +204,13 @@
 
     function drawNodes() {
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = "#60a5fa";
       for (let n of nodes) {
+        const gradient = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.radius * 3);
+        gradient.addColorStop(0, "#93c5fd");
+        gradient.addColorStop(1, "transparent");
+        ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(n.x, n.y, n.radius, 0, 2 * Math.PI);
+        ctx.arc(n.x, n.y, n.radius * (1 + 0.3 * Math.sin(Date.now() / 500 + n.x)), 0, 2 * Math.PI);
         ctx.fill();
       }
 
@@ -193,6 +248,8 @@
     createNodes(60);
     animate();
     updateToggleText();
+    updateVoiceToggleText();
+    document.getElementById("answer").value = "";
   </script>
 </body>
 </html>

@@ -107,3 +107,7 @@ button:hover {
 .tts-button:hover {
   background-color: #2563eb;
 }
+
+.tts-button + .tts-button {
+  margin-top: 0.5rem;
+}
