@@ -56,6 +56,7 @@ PROMPT_TEMPLATES = {
         "Result: <whether they were right or wrong> \n"
         "Focus Level: {focus_level}\n"
         "Explanation: <explanation>\n"
+        "Wheteher or not you will increase the difficulty of the question or not: <yes or no>\n"
         "New Question: <new question>\n"
 }
 global lastprompt
