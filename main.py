@@ -80,7 +80,23 @@ class ResponseModel(BaseModel):
     focus_level: int
     adapted_response: str
     prompt_used: str
+import pylsl import StreamInlet, resolve_streams
+import time
+import threading
+engagement_score = []
+def lsl_listener():
+    all_streams = resolve_streams()
+    for i,stream in enumerate(all_streams):
+        if stream.name() == 'engagement_score1':
+            eng_stream = all_streams[i]
+            break
 
+    while True:
+        engagement_score, timestamp = eng_stream.pull_sample()
+        time.sleep(0.01)
+
+lsl_thread = threading.Thread(target=lsl_listener, daemon=True)
+lsl_thread.start()
 # Call Gemini API
 async def call_llm_api(prompt: str) -> str:
     try:
