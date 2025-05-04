@@ -1,0 +1,109 @@
+body, html {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f4f7fa;
+  overflow-x: hidden;
+}
+
+canvas#neuron-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1;
+}
+
+.container {
+  max-width: 700px;
+  margin: 60px auto;
+  background: #ffffffcc;
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  z-index: 1;
+  position: relative;
+}
+
+h1 {
+  text-align: center;
+  color: #1d4ed8;
+  margin-bottom: 1rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+label {
+  font-weight: bold;
+  color: #1e293b;
+}
+
+input {
+  padding: 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+button {
+  padding: 0.8rem;
+  background-color: #1d4ed8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+button:hover {
+  background-color: #2563eb;
+}
+
+#response-section {
+  margin-top: 2rem;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 1rem;
+}
+
+#response-output {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.response-card {
+  background: #e0f2fe;
+  border-left: 4px solid #0284c7;
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #0f172a;
+  transition: all 0.3s ease;
+}
+
+.response-card:hover {
+  background: #bae6fd;
+}
+
+.tts-button {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.tts-button:hover {
+  background-color: #2563eb;
+}
