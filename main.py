@@ -80,7 +80,9 @@ class ResponseModel(BaseModel):
     focus_level: int
     adapted_response: str
     prompt_used: str
-import pylsl import StreamInlet, resolve_streams
+
+# Streaming EEG from g.hysis to LLM through LSL 
+from pylsl import StreamInlet, resolve_streams
 import time
 import threading
 engagement_score = []
@@ -90,9 +92,9 @@ def lsl_listener():
         if stream.name() == 'engagement_score1':
             eng_stream = all_streams[i]
             break
-
+	inlet = StreamInlet(eng_stream)
     while True:
-        engagement_score, timestamp = eng_stream.pull_sample()
+        engagement_score, timestamp = inlet.pull_sample()
         time.sleep(0.01)
 
 lsl_thread = threading.Thread(target=lsl_listener, daemon=True)
